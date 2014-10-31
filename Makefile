@@ -5,4 +5,6 @@ all: ecm.c dpa.c
 	$(CC) -o ecm -I. -pthread ecm.c
 	$(CC) -o dpa -I. -pthread dpa.c 
 
-
+clean:
+	rm ecm
+	rm dpa
