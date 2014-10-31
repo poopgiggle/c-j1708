@@ -8,3 +8,12 @@ all: ecm.c dpa.c
 clean:
 	rm ecm
 	rm dpa
+
+install:
+	cp ecm /usr/bin/
+	cp dpa /usr/bin/
+
+uninstall:
+	rm /usr/bin/ecm
+	rm /usr/bin/dpa
+
