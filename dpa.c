@@ -59,7 +59,7 @@ void * ReadThread(void* args){
   //  gpio = open_gpio("/sys/class/gpio/gpio60/value");
 
   synchronize();
-  printf("%s\n","Read thread synced");
+
   while(1){
     len = read_j1708_message(fd,msg_buf, &buslock);
     check = j1708_checksum(len,msg_buf);
@@ -94,7 +94,7 @@ void * WriteThread(void* args){
 
   while(1){
     len = recvfrom(read_socket,msg_buf,256,0,(struct sockaddr *) &other_addr, &client_size);
-    clearspec.tv_nsec = BIT_TIME*11*len;
+    clearspec.tv_nsec = BIT_TIME*10*len;
     wait_for_quiet(gpio,6,&buslock);
 
 
@@ -245,7 +245,7 @@ int read_j1708_message(int serial_port, char* buf, pthread_mutex_t *lock){
   //inter-char timeout
   struct timespec timeout;
   timeout.tv_sec = 0;
-  timeout.tv_nsec = BIT_TIME * 12;
+  timeout.tv_nsec = BIT_TIME * 5;
   
   fd_set fds;
   FD_ZERO (&fds);
