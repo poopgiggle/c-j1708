@@ -245,7 +245,7 @@ int read_j1708_message(int serial_port, char* buf, pthread_mutex_t *lock){
   //inter-char timeout
   struct timespec timeout;
   timeout.tv_sec = 0;
-  timeout.tv_nsec = BIT_TIME * 12;
+  timeout.tv_nsec = BIT_TIME * 10;
   
   fd_set fds;
   FD_ZERO (&fds);

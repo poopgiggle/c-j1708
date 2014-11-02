@@ -26,6 +26,7 @@
 
 #define NANO 1000000000L
 #define BIT_TIME 104170
+#define TENTH_BIT_TIME 10417
 #define TWELVEBITTIMES BIT_TIME * 12
 
 
@@ -59,7 +60,7 @@ void * ReadThread(void* args){
   //  gpio = open_gpio("/sys/class/gpio/gpio60/value");
 
   synchronize();
-  printf("%s\n","Read thread synced");
+  tcflush(fd,TCIFLUSH);
   while(1){
     len = read_j1708_message(fd,msg_buf, &buslock);
     check = j1708_checksum(len,msg_buf);
@@ -94,7 +95,7 @@ void * WriteThread(void* args){
 
   while(1){
     len = recvfrom(read_socket,msg_buf,256,0,(struct sockaddr *) &other_addr, &client_size);
-    clearspec.tv_nsec = BIT_TIME*12*len;
+    clearspec.tv_nsec = TENTH_BIT_TIME*78*len;
     wait_for_quiet(gpio,6,&buslock);
 
 
@@ -102,7 +103,7 @@ void * WriteThread(void* args){
     //fprintf(stderr,"sending a message!\n");
     write(fd,msg_buf,len);
     nanosleep(&clearspec,NULL);
-    tcflush(fd,TCIOFLUSH);
+    tcflush(fd,TCIFLUSH);
     pthread_mutex_unlock(&buslock);
     nanosleep(&sleepspec,NULL);
   }
@@ -245,7 +246,7 @@ int read_j1708_message(int serial_port, char* buf, pthread_mutex_t *lock){
   //inter-char timeout
   struct timespec timeout;
   timeout.tv_sec = 0;
-  timeout.tv_nsec = BIT_TIME * 8;
+  timeout.tv_nsec = BIT_TIME * 10;
   
   fd_set fds;
   FD_ZERO (&fds);
