@@ -26,6 +26,7 @@
 
 #define NANO 1000000000L
 #define BIT_TIME 104170
+#define TENTH_BIT_TIME 10417
 #define TWELVEBITTIMES BIT_TIME * 12
 
 
@@ -59,20 +60,13 @@ void * ReadThread(void* args){
   //  gpio = open_gpio("/sys/class/gpio/gpio60/value");
 
   synchronize();
-  printf("%s\n","Read thread synced");
+  tcflush(fd,TCIFLUSH);
   while(1){
     len = read_j1708_message(fd,msg_buf, &buslock);
     check = j1708_checksum(len,msg_buf);
-    if(!check){
-      if(sendto(read_socket,msg_buf,len,MSG_DONTWAIT,(struct sockaddr *) &other_addr, sizeof(other_addr)) < 0)
-	printf("%s\t%s\n","Error sending from DPA to ECM:",strerror(errno));
-    }
-    else{
-      printf("%s\n","DPA Dropped message due to checksum failure.");
-      ppj1708(len,msg_buf);
-    }
-    
-  }
+    if(!check)
+      sendto(read_socket,msg_buf,len,MSG_DONTWAIT,(struct sockaddr *) &other_addr, sizeof(other_addr));
+   }
 
 }
 
@@ -86,15 +80,15 @@ void * WriteThread(void* args){
   sleepspec.tv_sec = 0;
   sleepspec.tv_nsec = BIT_TIME*2;
 
-
   struct timespec clearspec;
   clearspec.tv_sec = 0;
   clearspec.tv_nsec = 0;
+
   //  gpio = open_gpio("/sys/class/gpio/gpio60/value");
 
   while(1){
     len = recvfrom(read_socket,msg_buf,256,0,(struct sockaddr *) &other_addr, &client_size);
-    clearspec.tv_nsec = BIT_TIME*11*len;
+    clearspec.tv_nsec = TENTH_BIT_TIME*50*len;
     wait_for_quiet(gpio,6,&buslock);
 
 
@@ -102,7 +96,7 @@ void * WriteThread(void* args){
     //fprintf(stderr,"sending a message!\n");
     write(fd,msg_buf,len);
     nanosleep(&clearspec,NULL);
-    tcflush(fd,TCIOFLUSH);
+    tcflush(fd,TCIFLUSH);
     pthread_mutex_unlock(&buslock);
     nanosleep(&sleepspec,NULL);
   }
@@ -152,7 +146,7 @@ int main(int argc, char* argv[]){
     printf("%s\n","Could not open socket.");
   }
   if(bind(read_socket, (struct sockaddr *) &my_addr, sizeof(my_addr)) < 0)
-    printf("%s\n","Could not bind ECM socket.");
+    printf("%s\n","Could not bind DPA socket.");
 
   pthread_mutex_init(&buslock,NULL);
 

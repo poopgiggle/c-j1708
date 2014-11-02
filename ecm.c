@@ -64,15 +64,8 @@ void * ReadThread(void* args){
   while(1){
     len = read_j1708_message(fd,msg_buf, &buslock);
     check = j1708_checksum(len,msg_buf);
-    if(!check && msg_buf[0] != 0xac){
-      if(sendto(read_socket,msg_buf,len,MSG_DONTWAIT,(struct sockaddr *) &other_addr, sizeof(other_addr)) < 0)
-	printf("%s\t%s\n","Error sending from ECM to DPA:",strerror(errno));
-    }
-    else{
-      printf("%s\n","ECM Dropped message due to checksum failure.");
-      ppj1708(len,msg_buf);
-    }
-    
+    if(!check)
+      sendto(read_socket,msg_buf,len,MSG_DONTWAIT,(struct sockaddr *) &other_addr, sizeof(other_addr));
   }
 
 }
@@ -95,7 +88,7 @@ void * WriteThread(void* args){
 
   while(1){
     len = recvfrom(read_socket,msg_buf,256,0,(struct sockaddr *) &other_addr, &client_size);
-    clearspec.tv_nsec = TENTH_BIT_TIME*78*len;
+    clearspec.tv_nsec = TENTH_BIT_TIME*50*len;
     wait_for_quiet(gpio,6,&buslock);
 
 
