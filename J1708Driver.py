@@ -23,6 +23,7 @@ class J1708Driver():
     def __init__(self,ports=ECM):
         self.serveport,self.clientport = ports
         self.sock = socket.socket(family=socket.AF_INET,type=socket.SOCK_DGRAM)
+        print("binding to %d" % self.clientport)
         self.sock.bind(('localhost',self.clientport))
 
     #checksum: Checksum included in return value if True. Defaults to false.
@@ -46,7 +47,7 @@ class J1708Driver():
 #Test to see if this works. Reads 10 messages, sends a CAT ATA SecuritySetup message.
 #You should see a reply of the form \x80\xfe\xac\xf0\x?? if it works
 if __name__ == '__main__':
-    driver = J1708Driver()
+    driver = J1708Driver(ECM)
     for i in range(0,10):
         print(repr(driver.read_message()))
     

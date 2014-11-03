@@ -34,3 +34,6 @@
 #compiled binaries
 dpa
 ecm
+
+__pycache__
+__pycache__/*
