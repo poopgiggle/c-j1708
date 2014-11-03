@@ -143,12 +143,12 @@ int main(int argc, char* argv[]){
   memset(&my_addr,0,sizeof(my_addr));
   my_addr.sin_family = AF_INET;
   my_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-  my_addr.sin_port = htons(6970);
+  my_addr.sin_port = htons(6971);
 
   memset(&other_addr,0,sizeof(other_addr));
   other_addr.sin_family = AF_INET;
   other_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-  other_addr.sin_port = htons(6969);
+  other_addr.sin_port = htons(6972);
 
 
   read_socket = socket(PF_INET, SOCK_DGRAM, 0);

@@ -3,6 +3,9 @@ import sys
 import struct
 from functools import reduce
 
+ECM = (6969,6970)
+DPA = (6971,6972)
+
 def toSignedChar(num):
         if type(num) is bytes:
                 return struct.unpack('b',num)[0]
@@ -17,9 +20,8 @@ def checksum(msg):
 class J1708Driver():
     #serveport: the port the the J1708 Driver. Defaults to the ECM driver, which is on port 6969
     #clientport: the port to listen on. The ECM driver sends to port 6970. Will add a method to register clients for more flexibility.
-    def __init__(self,serveport=6969,clientport=6970):
-        self.serveport = serveport
-        self.clientport = clientport
+    def __init__(self,ports=ECM):
+        self.serveport,self.clientport = ports
         self.sock = socket.socket(family=socket.AF_INET,type=socket.SOCK_DGRAM)
         self.sock.bind(('localhost',self.clientport))
 
