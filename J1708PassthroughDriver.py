@@ -30,9 +30,7 @@ class CatECMThread(PassThread):
         idx = message.find(b'\x80\xfe\xac',1)
         if idx > 0:
             thismsg = message[:idx]
-            check = struct.pack('b',J1708Driver.checksum(thismsg))
-            thismsg += check
-            return [thismsg] + apply_filter(message[idx:])
+            return [thismsg] + self.apply_filter(message[idx:])
 
         else:
             return [message]
