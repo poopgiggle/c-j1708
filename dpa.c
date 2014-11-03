@@ -64,8 +64,11 @@ void * ReadThread(void* args){
   while(1){
     len = read_j1708_message(fd,msg_buf, &buslock);
     check = j1708_checksum(len,msg_buf);
-    if(!check)
+    if(!check && len != 0){
+      //      printf("%s\n","Sending to ECM:");
+      //      ppj1708(len,msg_buf);
       sendto(read_socket,msg_buf,len,MSG_DONTWAIT,(struct sockaddr *) &other_addr, sizeof(other_addr));
+    }
    }
 
 }
@@ -73,6 +76,7 @@ void * ReadThread(void* args){
 void * WriteThread(void* args){
   int gpio;
   int len;
+  int len2;
   char msg_buf[256];
   int client_size = sizeof(other_addr);
 
@@ -88,15 +92,21 @@ void * WriteThread(void* args){
 
   while(1){
     len = recvfrom(read_socket,msg_buf,256,0,(struct sockaddr *) &other_addr, &client_size);
-    clearspec.tv_nsec = TENTH_BIT_TIME*50*len;
+    if(msg_buf[1] == 0xFE){
+      //      printf("%s\n","Sending to DPA");
+      //      ppj1708(len,msg_buf);
+    }
+    clearspec.tv_nsec = TENTH_BIT_TIME*14*len;
     wait_for_quiet(gpio,6,&buslock);
-
+    
 
 
     //fprintf(stderr,"sending a message!\n");
     write(fd,msg_buf,len);
+
     nanosleep(&clearspec,NULL);
-    tcflush(fd,TCIFLUSH);
+    len2 = read(fd,&msg_buf,len);
+    
     pthread_mutex_unlock(&buslock);
     nanosleep(&sleepspec,NULL);
   }
@@ -239,7 +249,8 @@ int read_j1708_message(int serial_port, char* buf, pthread_mutex_t *lock){
   //inter-char timeout
   struct timespec timeout;
   timeout.tv_sec = 0;
-  timeout.tv_nsec = BIT_TIME * 10;
+  //CHANGE THIS FOR DETROIT DIESEL/CAT
+  timeout.tv_nsec = TENTH_BIT_TIME * 93;
   
   fd_set fds;
   FD_ZERO (&fds);
