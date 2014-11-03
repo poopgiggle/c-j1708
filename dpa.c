@@ -250,7 +250,7 @@ int read_j1708_message(int serial_port, char* buf, pthread_mutex_t *lock){
   struct timespec timeout;
   timeout.tv_sec = 0;
   //CHANGE THIS FOR DETROIT DIESEL/CAT
-  timeout.tv_nsec = TENTH_BIT_TIME * 93;
+  timeout.tv_nsec = TENTH_BIT_TIME * 100;
   
   fd_set fds;
   FD_ZERO (&fds);
