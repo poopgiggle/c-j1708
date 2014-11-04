@@ -96,7 +96,7 @@ void * WriteThread(void* args){
       //      printf("%s\n","Sending to DPA");
       //      ppj1708(len,msg_buf);
     }
-    clearspec.tv_nsec = TENTH_BIT_TIME*14*len;
+    clearspec.tv_nsec = TENTH_BIT_TIME*95*len;
     wait_for_quiet(gpio,6,&buslock);
     
 
@@ -250,7 +250,7 @@ int read_j1708_message(int serial_port, char* buf, pthread_mutex_t *lock){
   struct timespec timeout;
   timeout.tv_sec = 0;
   //CHANGE THIS FOR DETROIT DIESEL/CAT
-  timeout.tv_nsec = TENTH_BIT_TIME * 100;
+  timeout.tv_nsec = TENTH_BIT_TIME * 120;
   
   fd_set fds;
   FD_ZERO (&fds);
