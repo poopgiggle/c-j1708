@@ -15,7 +15,8 @@ clean:
 install:
 	cp ecm /usr/bin/
 	cp dpa /usr/bin/
-
+	cp J1708PassthroughDriver /usr/bin/
+	cp J1708Driver.py /usr/local/lib/python3.5/site-packages/
 uninstall:
 	rm /usr/bin/ecm
 	rm /usr/bin/dpa

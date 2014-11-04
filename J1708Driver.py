@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import socket
 import sys
 import struct
@@ -23,7 +24,6 @@ class J1708Driver():
     def __init__(self,ports=ECM):
         self.serveport,self.clientport = ports
         self.sock = socket.socket(family=socket.AF_INET,type=socket.SOCK_DGRAM)
-        print("binding to %d" % self.clientport)
         self.sock.bind(('localhost',self.clientport))
 
     #checksum: Checksum included in return value if True. Defaults to false.
