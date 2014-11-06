@@ -47,6 +47,13 @@ class CatECMThread(PassThread):
                 for msg in msgs:
                     self.outport.send_message(msg,has_check=True)
 
+class DDECDPAThread(PassThread):
+    def apply_filter(self,message):
+        if b'\xb6\xfe\x80\xc7\x06' in message:#0xB6 0xFE 0x80 0xC7 0x06
+            return []
+        else:
+            return [message]
+
 
 class DDECECMThread(PassThread):
     def apply_filter(self,message):
@@ -95,7 +102,7 @@ if __name__ == '__main__':
     dpadriver = J1708Driver.J1708Driver(J1708Driver.DPA)
     threads = []
     threads.append(DDECECMThread(ecmdriver,dpadriver))
-    threads.append(PassThread(dpadriver,ecmdriver))
+    threads.append(DDECDPAThread(dpadriver,ecmdriver))
     list(map(lambda x: x.start(),threads))
     list(map(lambda x: x.join(), threads))
 
