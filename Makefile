@@ -1,6 +1,6 @@
 CC=gcc
 DEPS=bb_gpio.h
-XENO_CONFIG:=/usr/xenomai/bin/xeno-config
+XENO_CONFIG:=/usr/bin/xeno-config
 XENO_POSIX_CFLAGS:=$(shell $(XENO_CONFIG) --skin=posix --cflags)
 XENO_POSIX_LIBS:=$(shell $(XENO_CONFIG) --skin=posix --ldflags)
 
