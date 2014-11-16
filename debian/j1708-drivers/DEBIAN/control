@@ -1,0 +1,11 @@
+Package: j1708-drivers
+Version: 0.1-1
+Architecture: armhf
+Maintainer: James Johnson <james@synercontechnologies.com>
+Installed-Size: 87
+Depends: libc6 (>= 2.4), libxenomai1, xenomai-runtime
+Section: unknown
+Priority: optional
+Homepage: <insert the upstream URL, if relevant>
+Description: J1708 Drivers
+ Native drivers and python interface for J1708

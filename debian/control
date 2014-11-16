@@ -1,0 +1,17 @@
+Source: j1708-drivers
+Section: unknown
+Priority: optional
+Maintainer: James Johnson <james@synercontechnologies.com>
+Build-Depends: debhelper (>= 8.0.0), libxenomai-dev
+Standards-Version: 3.9.4
+Homepage: <insert the upstream URL, if relevant>
+#Vcs-Git: git://git.debian.org/collab-maint/j1708-drivers.git
+#Vcs-Browser: http://git.debian.org/?p=collab-maint/j1708-drivers.git;a=summary
+
+Package: j1708-drivers
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libxenomai1, xenomai-runtime
+Description: J1708 Drivers
+ Native drivers and python interface for J1708
+
+
