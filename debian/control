@@ -9,6 +9,7 @@ Homepage: <insert the upstream URL, if relevant>
 #Vcs-Browser: http://git.debian.org/?p=collab-maint/j1708-drivers.git;a=summary
 
 Package: j1708-drivers
+Version: 0.2
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, libxenomai1, xenomai-runtime
 Description: J1708 Drivers

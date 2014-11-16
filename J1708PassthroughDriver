@@ -1,14 +1,16 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.5
 import threading
 import J1708Driver
 import struct
 
 
 class PassThread(threading.Thread):
-    def __init__(self,inport,outport):
+    def __init__(self,inport,outport,name,filelock):#name is either "ECM" or "DPA"
         super(PassThread,self).__init__()
         self.inport = inport
         self.outport = outport
+        self.name = name
+        self.filelock = filelock
 
     def apply_filter(self,message):
         return [message]
@@ -16,13 +18,17 @@ class PassThread(threading.Thread):
     
 
     def run(self):
+#        fh = open("/var/diagnostics/toBeProcessed/forwarding.log","w+")
+#        fh.write("Begin J1708 Forwarding\n")
         while True:
             message = self.inport.read_message(checksum=True)
             #subclass PassThread to get a different apply_filter function.
             msgs = self.apply_filter(message)
             if len(msgs) > 0:
                 for msg in msgs:
-#                    print("%s\t%s" % ("AAA sending from DPA: ",repr(list(map(hex,list(msg))))))
+#                    with self.filelock:
+#                        fh.write("%s\t%s\n" % (self.name,repr(list(map(hex,list(msg))))))
+                    print("%s\t%s" % (self.name,repr(list(map(hex,list(msg))))))
                     self.outport.send_message(msg,has_check=True)
 
     
@@ -56,7 +62,27 @@ class DDECDPAThread(PassThread):
 
 
 class DDECECMThread(PassThread):
+
     def apply_filter(self,message):
+        messagelist = []
+        post_transport = self.apply_transport_filter(message)
+        for msg in post_transport:
+            msgs = self.apply_cat_filter(msg)
+            for amsg in msgs:
+                messagelist.append(amsg)
+        return messagelist
+        
+
+    def apply_cat_filter(self,message):
+        idx = message.find(b'\x80\xfe\xac',1)
+        if idx > 0:
+            thismsg = message[:idx]
+            return [thismsg] + self.apply_cat_filter(message[idx:])
+
+        else:
+            return [message]
+
+    def apply_transport_filter(self,message):
         if b'\x80\xc6' in message:
             return self.split_transport_data(message)
         elif b'\x80\xc5' in message:
@@ -67,32 +93,24 @@ class DDECECMThread(PassThread):
     def split_transport_data(self,message):
         idx = message.find(b'\x80\xc6')
         if idx == 0 and len(message) > 4 + message[2]:
-            return [message[:4+message[2]]]+self.apply_filter(message[4+message[2]:])
+            return [message[:4+message[2]]]+self.apply_transport_filter(message[4+message[2]:])
         elif idx == 0:
             return [message]
         else:
-            return [message[:idx]]+self.apply_filter(message[idx:])
+            return [message[:idx]]+self.apply_transport_filter(message[idx:])
 
     def split_transport_control(self,message):
         idx = message.find(b'\x80\xc5')
         if idx == 0 and len(message) > 4 + message[2]:
-            return [message[:4+message[2]]]+self.apply_filter(message[4+message[2]:])
+            return [message[:4+message[2]]]+self.apply_transport_filter(message[4+message[2]:])
         elif idx == 0:
             return [message]
         else:
-            return [message[:idx]]+self.apply_filter(message[idx:])
+            return [message[:idx]]+self.apply_transport_filter(message[idx:])
 
 
 
-    def run(self):
-        while True:
-            message = self.inport.read_message(checksum=True)
-            #subclass PassThread to get a different apply_filter function.
-            msgs = self.apply_filter(message)
-            if len(msgs) > 0:
-                for msg in msgs:
- #                   print("%s\t%s" % ("sending from ecm: ",repr(list(map(hex,list(msg))))))
-                    self.outport.send_message(msg,has_check=True)
+
 
 
 
@@ -100,9 +118,10 @@ class DDECECMThread(PassThread):
 if __name__ == '__main__':
     ecmdriver = J1708Driver.J1708Driver(J1708Driver.ECM)
     dpadriver = J1708Driver.J1708Driver(J1708Driver.DPA)
+    writelock = threading.Lock()
     threads = []
-    threads.append(CatECMThread(ecmdriver,dpadriver))
-    threads.append(PassThread(dpadriver,ecmdriver))
+    threads.append(DDECECMThread(ecmdriver,dpadriver,"ECM",writelock))
+    threads.append(PassThread(dpadriver,ecmdriver,"DPA",writelock))
     list(map(lambda x: x.start(),threads))
     list(map(lambda x: x.join(), threads))
 

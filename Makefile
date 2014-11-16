@@ -22,14 +22,7 @@ install:
 	cp J1708Driver.py $(DESTDIR)/usr/local/lib/python3.5/site-packages/
 	if [ ! -e $(DESTDIR)/etc/init ]; then mkdir -p $(DESTDIR)/etc/init; fi
 	cp upstart/*.conf $(DESTDIR)/etc/init/
-
-uninstall:
-	rm $(DESTDIR)$(INSTALL_PREFIX)/bin/ecm
-	rm $(DESTDIR)$(INSTALL_PREFIX)/bin/dpa
-	rm $(DESTDIR)$(INSTALL_PREFIX)/bin/J1708PassthroughDriver
-	rm $(DESTDIR)/usr/local/lib/python3.5/site-packages/J1708Driver.py
-	rm $(DESTDIR)/etc/init/dpa.conf
-	rm $(DESTDIR)/etc/init/ecm.conf
-	rm $(DESTDIR)/etc/init/fwd-j1708.conf
+	if [ ! -e $(DESTDIR)/var/diagnostics/toBeProcessed ]; then mkdir -p $(DESTDIR)/var/diagnostics/toBeProcessed; fi
+	if [ ! -e $(DESTDIR)/var/diagnostics/archived ]; then mkdir -p $(DESTDIR)/var/diagnostics/archived; fi
 
 
