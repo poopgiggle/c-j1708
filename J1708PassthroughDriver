@@ -14,6 +14,7 @@ class PassThread(threading.Thread):
         self.outport = outport
         self.name = name
         self.filelock = filelock
+
     def apply_filter(self,message):
         return [message]
 
@@ -23,15 +24,14 @@ class PassThread(threading.Thread):
         fh = open("/var/diagnostics/toBeProcessed/forwarding.log","w+")
         fh.write("Begin J1708 Forwarding\n")
         while True:
-            msgs = self.inport.read_message(checksum=True)
+            msg = self.inport.read_message(checksum=True)
             #subclass PassThread to get a different apply_filter function.
 
 
-            if len(msgs) > 0:
-                for msg in msgs:
-                    with self.filelock:
-                        fh.write("%s\t%s\n" % (self.name,repr(list(map(hex,list(msg))))))
-                        self.outport.send_message(msg,has_check=True)
+            if len(msg) > 0:
+                with self.filelock:
+                    fh.write("%s\t%s\n" % (self.name,repr(list(map(hex,list(msg))))))
+                    self.outport.send_message(msg,has_check=True)
 
     
 
