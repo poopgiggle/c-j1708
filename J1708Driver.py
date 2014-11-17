@@ -18,6 +18,7 @@ def checksum(msg):
         return toSignedChar(~reduce(lambda x,y: (x + y) & 0xFF, list(msg)) + 1)
 
 
+
 class J1708Driver():
     #serveport: the port the the J1708 Driver. Defaults to the ECM driver, which is on port 6969
     #clientport: the port to listen on. The ECM driver sends to port 6970. Will add a method to register clients for more flexibility.
@@ -25,15 +26,19 @@ class J1708Driver():
         self.serveport,self.clientport = ports
         self.sock = socket.socket(family=socket.AF_INET,type=socket.SOCK_DGRAM)
         self.sock.bind(('localhost',self.clientport))
+        self.source_mid = None
 
     #checksum: Checksum included in return value if True. Defaults to false.
     #returns the message read as bytes type.
     def read_message(self,checksum=False):
         message = self.sock.recv(1024)
+        if self.source_mid == None:
+                self.source_mid = struct.pack("B",message[0])
+        messages = self.apply_transport_filter(message)
         if checksum:
-            return message
+            return messages
         else:
-            return message[:-1]
+            return [x[:-1] for x in messages]
 
     #buf: message to send as type bytes
     #has_check: True if your message includes checksum. Defaults to False.
@@ -43,6 +48,33 @@ class J1708Driver():
             check = struct.pack('b',checksum(msg))
             msg += check
         self.sock.sendto(msg,('localhost',self.serveport))
+
+    def apply_transport_filter(self,message):
+        if self.source_mid+b'\xc6' in message:
+            return self.split_transport_data(message)
+        elif self.source_mid+b'\xc5' in message:
+            return self.split_transport_control(message)
+        else:
+            return [message]
+
+    def split_transport_data(self,message):
+        idx = message.find(self.source_mid+b'\xc6')
+        if idx == 0 and len(message) > 4 + message[2]:
+            return [message[:4+message[2]]]+self.apply_transport_filter(message[4+message[2]:])
+        elif idx == 0:
+            return [message]
+        else:
+            return [message[:idx]]+self.apply_transport_filter(message[idx:])
+
+    def split_transport_control(self,message):
+        idx = message.find(self.source_mid+b'\xc5')
+        if idx == 0 and len(message) > 4 + message[2]:
+            return [message[:4+message[2]]]+self.apply_transport_filter(message[4+message[2]:])
+        elif idx == 0:
+            return [message]
+        else:
+            return [message[:idx]]+self.apply_transport_filter(message[idx:])
+
 
 #Test to see if this works. Reads 10 messages, sends a CAT ATA SecuritySetup message.
 #You should see a reply of the form \x80\xfe\xac\xf0\x?? if it works

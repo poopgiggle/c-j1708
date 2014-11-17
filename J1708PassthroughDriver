@@ -23,10 +23,10 @@ class PassThread(threading.Thread):
         fh = open("/var/diagnostics/toBeProcessed/forwarding.log","w+")
         fh.write("Begin J1708 Forwarding\n")
         while True:
-            message = self.inport.read_message(checksum=True)
+            msgs = self.inport.read_message(checksum=True)
             #subclass PassThread to get a different apply_filter function.
 
-            msgs = self.apply_filter(message)
+
             if len(msgs) > 0:
                 for msg in msgs:
                     with self.filelock:
@@ -36,126 +36,14 @@ class PassThread(threading.Thread):
     
 
 
-class CatECMThread(PassThread):
-    def apply_filter(self,message):
-        idx = message.find(b'\x80\xfe\xac',1)
-        if idx > 0:
-            thismsg = message[:idx]
-            return [thismsg] + self.apply_filter(message[idx:])
-
-        else:
-            return [message]
-
-    def run(self):
-        while True:
-            message = self.inport.read_message(checksum=True)
-            #subclass PassThread to get a different apply_filter function.
-            msgs = self.apply_filter(message)
-            if len(msgs) > 0:
-                for msg in msgs:
-                    self.outport.send_message(msg,has_check=True)
-
-'''class DDECDPAThread(PassThread):
-    def apply_filter(self,message):
-        if b'\xb6\xfe\x80\xc7\x06' in message:#0xB6 0xFE 0x80 0xC7 0x06
-            return []
-        else:
-            return [message]'''
-
-
-class DDECECMThread(PassThread):
-
-    def apply_filter(self,message):
-        messagelist = []
-        post_transport = self.apply_transport_filter(message)
-        for msg in post_transport:
-            msgs = self.apply_cat_filter(msg)
-            for amsg in msgs:
-                messagelist.append(amsg)
-        return messagelist
-        
-
-    def apply_cat_filter(self,message):
-        idx = message.find(b'\x80\xfe\xac',1)
-        if idx > 0:
-            thismsg = message[:idx]
-            return [thismsg] + self.apply_cat_filter(message[idx:])
-
-        else:
-            return [message]
-
-    def apply_transport_filter(self,message):
-        if b'\x80\xc6' in message:
-            return self.split_transport_data(message)
-        elif b'\x80\xc5' in message:
-            return self.split_transport_control(message)
-        else:
-            return [message]
-
-    def split_transport_data(self,message):
-        idx = message.find(b'\x80\xc6')
-        if idx == 0 and len(message) > 4 + message[2]:
-            return [message[:4+message[2]]]+self.apply_transport_filter(message[4+message[2]:])
-        elif idx == 0:
-            return [message]
-        else:
-            return [message[:idx]]+self.apply_transport_filter(message[idx:])
-
-    def split_transport_control(self,message):
-        idx = message.find(b'\x80\xc5')
-        if idx == 0 and len(message) > 4 + message[2]:
-            return [message[:4+message[2]]]+self.apply_transport_filter(message[4+message[2]:])
-        elif idx == 0:
-            return [message]
-        else:
-            return [message[:idx]]+self.apply_transport_filter(message[idx:])
-
-class DDECDPAThread(PassThread):
-
-    def apply_filter(self,message):
-        messagelist = []
-        post_transport = self.apply_transport_filter(message)
-        return post_transport
-
-    def apply_transport_filter(self,message):
-        if b'\xb6\xc6' in message:
-            return self.split_transport_data(message)
-        elif b'\xb6\xc5' in message:
-            return self.split_transport_control(message)
-        else:
-            return [message]
-
-    def split_transport_data(self,message):
-        idx = message.find(b'\xb6\xc6')
-        if idx == 0 and len(message) > 4 + message[2]:
-            return [message[:4+message[2]]]+self.apply_transport_filter(message[4+message[2]:])
-        elif idx == 0:
-            return [message]
-        else:
-            return [message[:idx]]+self.apply_transport_filter(message[idx:])
-
-    def split_transport_control(self,message):
-        idx = message.find(b'\xb6\xc5')
-        if idx == 0 and len(message) > 4 + message[2]:
-            return [message[:4+message[2]]]+self.apply_transport_filter(message[4+message[2]:])
-        elif idx == 0:
-            return [message]
-        else:
-            return [message[:idx]]+self.apply_transport_filter(message[idx:])
-
-
-
-
-
-
 
 if __name__ == '__main__':
     ecmdriver = J1708Driver.J1708Driver(J1708Driver.ECM)
     dpadriver = J1708Driver.J1708Driver(J1708Driver.DPA)
     writelock = threading.Lock()
     threads = []
-    threads.append(DDECECMThread(ecmdriver,dpadriver,"ECM",writelock))
-    threads.append(DDECDPAThread(dpadriver,ecmdriver,"DPA",writelock))
+    threads.append(PassThread(ecmdriver,dpadriver,"ECM",writelock))
+    threads.append(PassThread(dpadriver,ecmdriver,"DPA",writelock))
     list(map(lambda x: x.start(),threads))
     list(map(lambda x: x.join(), threads))
 
