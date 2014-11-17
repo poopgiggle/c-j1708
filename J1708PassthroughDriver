@@ -2,7 +2,7 @@
 import threading
 import J1708Driver
 import struct
-
+import time
 
 dpa_mid = None
 ecm_mid = None
@@ -30,7 +30,7 @@ class PassThread(threading.Thread):
 
             if len(msg) > 0:
                 with self.filelock:
-                    fh.write("%s\t%s\n" % (self.name,repr(list(map(hex,list(msg))))))
+                    fh.write("%f %s\t%s\n" % (time.time(),self.name,repr(list(map(hex,list(msg))))))
                     self.outport.send_message(msg,has_check=True)
 
     

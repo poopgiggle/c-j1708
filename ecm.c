@@ -80,7 +80,7 @@ void * WriteThread(void* args){
 
   struct timespec sleepspec;
   sleepspec.tv_sec = 0;
-  sleepspec.tv_nsec = BIT_TIME*2;
+  sleepspec.tv_nsec = BIT_TIME*10;
 
   struct timespec clearspec;
   clearspec.tv_sec = 0;

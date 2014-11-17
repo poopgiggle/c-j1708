@@ -31,13 +31,30 @@ class SplitterThread(threading.Thread):
             message = self.read_socket.recv(1024)
             if self.source_mid == None:
                 self.source_mid = struct.pack("B",message[0])
-            messages = self.apply_transport_filter(message)
+            post_transport = self.apply_transport_filter(message)
+            messages = []
+            for msg in post_transport:
+                if not msg[1] in [b'\xc5',b'\xc6']:
+                    msgs = self.apply_proprietary_filter(msg)
+                    for amsg in msgs:
+                        messages.append(amsg)
+            
             for msg in messages:
                 try:
                     self.queue.put_nowait(msg)
                 except queue.Full:
                     self.queue.get()
                     self.queue.put_nowait(msg)
+
+    def apply_proprietary_filter(self,message):
+        idx = message.find(self.source_mid+b'\xfe',1)
+        if idx > 0:
+            thismsg = message[:idx]
+            return [thismsg] + self.apply_proprietary_filter(message[idx:])
+
+        else:
+            return [message]
+
 
     def apply_transport_filter(self,message):
         if self.source_mid+b'\xc6' in message:
