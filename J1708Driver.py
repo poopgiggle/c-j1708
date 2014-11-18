@@ -113,6 +113,9 @@ class J1708Driver():
             msg += check
         self.sock.sendto(msg,('localhost',self.serveport))
 
+    def __del__(self):
+        self.sock.close()
+
 
 
 #Test to see if this works. Reads 10 messages, sends a CAT ATA SecuritySetup message.
