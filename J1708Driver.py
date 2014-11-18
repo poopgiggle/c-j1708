@@ -97,8 +97,14 @@ class J1708Driver():
 
     #checksum: Checksum included in return value if True. Defaults to false.
     #returns the message read as bytes type.
-    def read_message(self,checksum=False):
-        message = self.read_queue.get()
+    def read_message(self,checksum=False,time_out=5):
+        if time_out is None:
+            message = self.read_queue.get()
+        else:
+            try:
+                message = self.read_queue.get(block=False,timeout=time_out)
+            except queue.Empty:
+                return None
         if checksum:
             return message
         else:
