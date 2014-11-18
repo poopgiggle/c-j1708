@@ -21,7 +21,7 @@ class PassThread(threading.Thread):
     
 
     def run(self):
-        fh = open("/var/diagnostics/toBeProcessed/forwarding.log","w+")
+        fh = open("/var/diagnostics/toBeProcessed/forwarding.log","a")
         fh.write("Begin J1708 Forwarding\n")
         while True:
             msg = self.inport.read_message(checksum=True)
