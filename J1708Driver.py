@@ -25,9 +25,14 @@ class SplitterThread(threading.Thread):
         self.read_socket = read_socket
         self.queue = queue
         self.source_mid = None
+        self.killed = threading.Event()
+
+    def join(self,timeout=None):
+        self.killed.set()
+        super(SplitterThread,self).join(timeout)
 
     def run(self):
-        while True:
+        while not self.killed.is_set():
             message = self.read_socket.recv(1024)
             if self.source_mid == None:
                 self.source_mid = struct.pack("B",message[0])
@@ -120,6 +125,7 @@ class J1708Driver():
         self.sock.sendto(msg,('localhost',self.serveport))
 
     def __del__(self):
+        self.read_thread.join()
         self.sock.close()
 
 
