@@ -102,7 +102,7 @@ class J1708Driver():
             message = self.read_queue.get()
         else:
             try:
-                message = self.read_queue.get(block=False,timeout=time_out)
+                message = self.read_queue.get(block=True,timeout=time_out)
             except queue.Empty:
                 return None
         if checksum:
