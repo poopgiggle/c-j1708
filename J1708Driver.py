@@ -27,7 +27,7 @@ class SplitterThread(threading.Thread):
         self.source_mid = None
         self.killed = threading.Event()
 
-    def join(self,timeout=None):
+    def kill(self,timeout=None):
         self.killed.set()
         super(SplitterThread,self).join(timeout)
 
@@ -39,7 +39,7 @@ class SplitterThread(threading.Thread):
             post_transport = self.apply_transport_filter(message)
             messages = []
             for msg in post_transport:
-                if not msg[1] in [b'\xc5',b'\xc6']:
+                if msg is not None and len(msg) > 1 and not msg[1] in [b'\xc5',b'\xc6']:
                     msgs = self.apply_proprietary_filter(msg)
                     for amsg in msgs:
                         messages.append(amsg)

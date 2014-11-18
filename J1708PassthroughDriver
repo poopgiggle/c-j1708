@@ -28,7 +28,7 @@ class PassThread(threading.Thread):
             #subclass PassThread to get a different apply_filter function.
 
 
-            if len(msg) > 0:
+            if msg is not None and len(msg) > 0:
                 with self.filelock:
                     fh.write("%f %s\t%s\n" % (time.time(),self.name,repr(list(map(hex,list(msg))))))
                     self.outport.send_message(msg,has_check=True)
