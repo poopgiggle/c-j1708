@@ -211,7 +211,7 @@ int difftimenanos(struct timespec diffspec){
   }*/
 
 int read_gpio(){
-  return *(gpio + GPIO_IN) & GPIO3_20;
+  return *(gpio + GPIO_IN) & GPIO1_28;
   }
 
 
@@ -309,7 +309,7 @@ static void iosetup(void){
 			  PROT_READ|PROT_WRITE,
 			  MAP_SHARED,
 			  mem_fd,
-            GPIO3_BASE
+            GPIO1_BASE
 			  );
 
   if (gpio_map == MAP_FAILED) {
