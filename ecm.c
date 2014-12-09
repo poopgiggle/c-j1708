@@ -57,6 +57,8 @@ void * ReadThread(void* args){
   int check;
   int gpio;
   char msg_buf[256];
+  int placeholder;
+  int i;
   //  gpio = open_gpio("/sys/class/gpio/gpio60/value");
 
   synchronize();
@@ -64,8 +66,20 @@ void * ReadThread(void* args){
   while(1){
     len = read_j1708_message(fd,msg_buf, &buslock);
     check = j1708_checksum(len,msg_buf);
-    if(!check && len != 0)
-      sendto(read_socket,msg_buf,len,MSG_DONTWAIT,(struct sockaddr *) &other_addr, sizeof(other_addr));
+    if(!check && len != 0){
+      placeholder = 0;
+      for(i=0; i<len ; i++){
+	if(i-placeholder > 0 && msg_buf[i] == 0x80 && !j1708_checksum(i-placeholder,&msg_buf[placeholder])){
+	  printf("%s","ECM SENDING STUCK MESSAGE: ");
+	  ppj1708(i-placeholder,&msg_buf[placeholder]);
+	  sendto(read_socket,&msg_buf[placeholder],i-placeholder,MSG_DONTWAIT,(struct sockaddr*) &other_addr, sizeof(other_addr));
+	  placeholder = i;
+	}
+      }
+      if(len-placeholder > 0 && !j1708_checksum(len-placeholder,&msg_buf[placeholder])){
+      sendto(read_socket,&msg_buf[placeholder],len-placeholder,MSG_DONTWAIT,(struct sockaddr *) &other_addr, sizeof(other_addr));
+      }
+    }
   
   }
 

@@ -57,7 +57,8 @@ void * ReadThread(void* args){
   int check;
   int gpio;
   char msg_buf[256];
-  //  gpio = open_gpio("/sys/class/gpio/gpio60/value");
+  int placeholder;
+  int i;
 
   synchronize();
   tcflush(fd,TCIFLUSH);
@@ -65,12 +66,21 @@ void * ReadThread(void* args){
     len = read_j1708_message(fd,msg_buf, &buslock);
     check = j1708_checksum(len,msg_buf);
     if(!check && len != 0){
-      //      printf("%s\n","Sending to ECM:");
-      //      ppj1708(len,msg_buf);
-      sendto(read_socket,msg_buf,len,MSG_DONTWAIT,(struct sockaddr *) &other_addr, sizeof(other_addr));
+      placeholder = 0;
+      for(i=0; i<len ; i++){
+	if(i-placeholder > 0 && (msg_buf[i] == 0xac || msg_buf[i] == 0xb6)
+	   && !j1708_checksum(i-placeholder,&msg_buf[placeholder])){
+	  printf("%s","DPA SENDING STUCK MESSAGE: ");
+	  ppj1708(i-placeholder,&msg_buf[placeholder]);
+      sendto(read_socket,&msg_buf[placeholder],i-placeholder,MSG_DONTWAIT,(struct sockaddr *) &other_addr, sizeof(other_addr));
+      placeholder = i;
+	}
+      }
+      if(len-placeholder > 0 && !j1708_checksum(len-placeholder,&msg_buf[placeholder])){
+	sendto(read_socket,&msg_buf[placeholder],len-placeholder,MSG_DONTWAIT,(struct sockaddr *) &other_addr, sizeof(other_addr));
+      }
     }
-   }
-
+  }
 }
 
 void * WriteThread(void* args){
