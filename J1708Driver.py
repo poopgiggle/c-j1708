@@ -1,8 +1,8 @@
-#!/usr/bin/env python3
 import socket
 import sys
 import struct
 from functools import reduce
+import select
 
 ECM = (6969,6970)
 DPA = (6971,6972)
@@ -28,12 +28,16 @@ class J1708Driver():
 
     #checksum: Checksum included in return value if True. Defaults to false.
     #returns the message read as bytes type.
-    def read_message(self,checksum=False):
-        message = self.sock.recv(1024)
-        if checksum:
-            return message
+    def read_message(self,checksum=False,timeout=0.5):
+        ready = select.select([self.sock],[],[],timeout)[0]
+        if ready == []:
+                return None
         else:
-            return message[:-1]
+                message = self.sock.recv(256)
+                if checksum:
+                        return message
+                else:
+                        return message[:-1]
 
     #buf: message to send as type bytes
     #has_check: True if your message includes checksum. Defaults to False.
@@ -43,6 +47,13 @@ class J1708Driver():
             check = struct.pack('b',checksum(msg))
             msg += check
         self.sock.sendto(msg,('localhost',self.serveport))
+
+    def close(self):
+        self.sock.close()
+
+    def reBind(self):
+        print("binding to %d" % self.clientport)
+        self.sock.bind(('localhost',self.clientport))
 
 #Test to see if this works. Reads 10 messages, sends a CAT ATA SecuritySetup message.
 #You should see a reply of the form \x80\xfe\xac\xf0\x?? if it works
