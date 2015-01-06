@@ -140,7 +140,7 @@ class J1587ReceiveSession(threading.Thread):
         self.out_queue.put(cts.to_buffer())
         start_time = time.time()
         while None in segment_buffer and time.time() - start_time < 60:
-            
+            msg = None
             try:
                 msg = self.in_queue.get(block=True,timeout=2)
             except queue.Empty:
@@ -148,6 +148,9 @@ class J1587ReceiveSession(threading.Thread):
                     if segment_buffer[i] is None:
                         cts = CTS_FRAME(self.my_mid,self.other_mid,1,i+1)
                         self.out_queue.put(cts.to_buffer())
+                        time.sleep(.1)
+            if msg is None:
+                continue
 
             if is_abort_frame(msg):
                 break
@@ -216,7 +219,7 @@ class J1587SendSession(threading.Thread):
         #begin sending loop
         eom_recvd = False
         start_time = time.time()
-        while (not eom_recvd) and time.time() - start_time < 60:
+        while (not eom_recvd) and time.time() - start_time < 10:
             try:
                 msg = self.in_queue.get(block=True,timeout=2)
             except queue.Empty:
