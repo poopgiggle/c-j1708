@@ -6,6 +6,7 @@ import threading
 import select
 import queue
 import time
+import multiprocessing
 RTS = 1
 CTS = 2
 EOM = 3
@@ -28,8 +29,8 @@ class RTS_FRAME(conn_mgmt_frame):
         self.segments = segments
         self.length = length
 
-	def to_buffer(self):
-            return [self.src,MGMT_PID,5,self.dst,self.conn_mgmt,self.segments,self.length & 0xFF,(self.length & 0xFF00) >> 8]
+    def to_buffer(self):
+        return bytes([self.src,MGMT_PID,5,self.dst,self.conn_mgmt,self.segments,self.length & 0xFF,(self.length & 0xFF00) >> 8])
 
 class CTS_FRAME(conn_mgmt_frame):
     def __init__(self,src,dst,num_segments,next_segment):
@@ -37,15 +38,15 @@ class CTS_FRAME(conn_mgmt_frame):
         self.num_segments = num_segments
         self.next_segment = next_segment
 
-	def to_buffer(self):
-            return [self.src,MGMT_PID,4,self.dst,self.conn_mgmt,self.num_segments,self.next_segment]
+    def to_buffer(self):
+        return bytes([self.src,MGMT_PID,4,self.dst,self.conn_mgmt,self.num_segments,self.next_segment])
 
 class EOM_FRAME(conn_mgmt_frame):
     def __init__(self,src,dst):
         super().__init__(src,dst,EOM)
 
-	def to_buffer(self):
-            return [self.src,MGMT_PID,2,self.dst,self.conn_mgmt]
+    def to_buffer(self):
+        return bytes([self.src,MGMT_PID,2,self.dst,self.conn_mgmt])
 
 
 class RSD_FRAME(conn_mgmt_frame):
@@ -53,15 +54,15 @@ class RSD_FRAME(conn_mgmt_frame):
         super().__init__(src,dst,RSD)
         self.request = request
 
-	def to_buffer(self):
-            return [self.src,MGMT_PID,4,self.dst,self.conn_mgmt,self.request & 0xFF,(self.request & 0xFF00) >> 8]
+    def to_buffer(self):
+        return bytes([self.src,MGMT_PID,4,self.dst,self.conn_mgmt,self.request & 0xFF,(self.request & 0xFF00) >> 8])
 
 class ABORT_FRAME(conn_mgmt_frame):
     def __init__(self,src,dst):
         super().__init__(src,dst,ABORT)
 
-	def to_buffer(self):
-            return [self.src,MGMT_PID,2,self.dst,self.conn_mgmt]
+    def to_buffer(self):
+        return bytes([self.src,MGMT_PID,2,self.dst,self.conn_mgmt])
 
 
 def parse_conn_frame(buf):
@@ -88,14 +89,13 @@ def parse_conn_frame(buf):
         raise Exception("unrecognized conn_mgmt command code")
 
 def is_conn_frame(buf):
-    return len(buf) >= 5 and buf[2] == MGMT_PID
+    return len(buf) >= 5 and buf[1] == MGMT_PID
 
 def is_rts_frame(buf):
-    return len(buf) >= 5 and buf[4] == RTS
+    return is_conn_frame(buf) and buf[4] == RTS
 
 def is_abort_frame(buf):
-    return len(buf) >= 5 and buf[4] == ABORT
-
+    return is_conn_frame(buf) and buf[4] == ABORT
 
 
 class conn_mode_transfer_frame():
@@ -105,8 +105,8 @@ class conn_mode_transfer_frame():
         self.segment_id = segment_id
         self.segment_data = segment_data
 
-	def to_buffer(self):
-            return [self.src,DAT_PID,2+len(self.segment_data),self.dst,self.segment_id]+self.segment_data
+    def to_buffer(self):
+        return bytes([self.src,DAT_PID,2+len(self.segment_data),self.dst,self.segment_id])+self.segment_data
 
 def parse_data_frame(buf):
     
@@ -137,24 +137,30 @@ class J1587ReceiveSession(threading.Thread):
         length = self.rts.length
         segment_buffer = [None] * segments
         cts = CTS_FRAME(self.my_mid,self.other_mid,segments,1)
-        self.out_queue.put(cts.to_buffer)
+        self.out_queue.put(cts.to_buffer())
         start_time = time.time()
         while None in segment_buffer and time.time() - start_time < 60:
-            msg = self.in_queue.get(block=True,timeout=2)
-            if msg is None:#we didn't get a data frame, start sending CTSs
-                for i in range(len(segments)):
-                    if segments[i] is None:
+            
+            try:
+                msg = self.in_queue.get(block=True,timeout=2)
+            except queue.Empty:
+                for i in range(segments):
+                    if segment_buffer[i] is None:
                         cts = CTS_FRAME(self.my_mid,self.other_mid,1,i+1)
                         self.out_queue.put(cts.to_buffer())
-            elif is_abort_frame(msg):
+
+            if is_abort_frame(msg):
                 break
+            elif is_rts_frame(msg):
+                continue
             elif is_conn_frame(msg):
                 abort = ABORT_FRAME(self.my_mid,self.other_mid)
                 for i in range(3):
                     self.out_queue.put(abort.to_buffer())
+                    break
             elif is_data_frame(msg):
                 dat = parse_data_frame(msg)
-                segment_buffer[dat.segment_id] = dat
+                segment_buffer[dat.segment_id-1] = dat
             else:
                 raise Exception("J1587 Session Thread shouldn't have received %s" % repr(msg))
 
@@ -164,12 +170,13 @@ class J1587ReceiveSession(threading.Thread):
                 self.out_queue.put(abort.to_buffer())
             return #timed out
 
-        eom = EOM_FRAME(self.my_mid,self.other-mid)
+        eom = EOM_FRAME(self.my_mid,self.other_mid)
         for i in range(3):
             self.out_queue.put(eom.to_buffer())
         data = bytes([self.other_mid])
         for segment in segment_buffer:
             data += segment.segment_data
+
         self.mailbox.put(data)
 
     def give(self,msg):
@@ -189,16 +196,17 @@ class J1587SendSession(threading.Thread):
         data_list = []
         data_frames = []
         #chop up data
+        msg = self.msg
         data_len = len(msg)
         while len(msg) > 0:
             data_list += [msg[:15]]
-            del(msg[:15])
+            msg = msg[15:]
 
         #package data into transfer frames
         i = 1
         for el in data_list:
             frame = conn_mode_transfer_frame(self.src,self.dst,i,el)
-            data_frames += frame
+            data_frames += [frame]
             i += 1
 
         #send rts
@@ -209,7 +217,7 @@ class J1587SendSession(threading.Thread):
         eom_recvd = False
         start_time = time.time()
         while (not eom_recvd) and time.time() - start_time < 60:
-            msg = self.in_queue.get(blocking=True,timeout=2)
+            msg = self.in_queue.get(block=True,timeout=2)
             if msg is None:
                 continue
             if not is_conn_frame(msg):
@@ -237,10 +245,10 @@ class J1587SendSession(threading.Thread):
         
 class J1708WorkerThread(threading.Thread):
     def __init__(self,read_queue):
-        super(J1708ReaderThread,self).__init__()
+        super(J1708WorkerThread,self).__init__()
         self.read_queue = read_queue
         self.stopped = threading.Event()
-        self.driver = J1708Driver(J1708Driver.ECM)
+        self.driver = J1708Driver.J1708Driver(J1708Driver.ECM)
 
     def run(self):
         while not self.stopped.is_set():
@@ -250,7 +258,7 @@ class J1708WorkerThread(threading.Thread):
 
     def join(self,timeout=None):
         self.stopped.set()
-        super(J1708WorkerThread,self).__init__()
+        super(J1708WorkerThread,self).join(timeout=timeout)
 
     def send_message(self,msg,has_check=False):
         self.driver.send_message(msg,has_check)
@@ -260,8 +268,8 @@ class J1587WorkerThread(threading.Thread):
     def __init__(self,my_mid):
         super(J1587WorkerThread,self).__init__()
         self.my_mid = my_mid
-        self.read_queue = queue.Queue()
-        self.send_queue = queue.Queue()
+        self.read_queue = multiprocessing.Queue()
+        self.send_queue = multiprocessing.Queue()
         self.mailbox = queue.Queue()
         self.sessions = {}
         self.worker = J1708WorkerThread(self.read_queue)
@@ -270,17 +278,17 @@ class J1587WorkerThread(threading.Thread):
     def run(self):
         self.worker.start()
         while not self.stopped.is_set():
-            qs = select([self.read_queue,self.send_queue],[],[],1)
+            qs = select.select([self.read_queue._reader,self.send_queue._reader],[],[],1)[0]
             if qs is []:
                 continue
             for q in qs:
-                if q is self.read_queue:
-                    while not q.empty():
-                        msg = q.get()
+                if q is self.read_queue._reader:
+                    while not self.read_queue.empty():
+                        msg = self.read_queue.get()
                         self.handle_message(msg)
                 else:
-                    while not q.empty():
-                        msg = q.get()
+                    while not self.send_queue.empty():
+                        msg = self.send_queue.get()
                         self.worker.send_message(msg)
                     
 
@@ -292,26 +300,27 @@ class J1587WorkerThread(threading.Thread):
         elif not msg[3] == self.my_mid:#connection message not for us; just pass it on
             self.mailbox.put(msg)
         else:
-            if msg[0] in list(self.sessions.keys()) and sessions[msg[0]].is_alive():
-                self.sessions[msg[0]].give(msg)
+            if bytes([msg[0]]) in list(self.sessions.keys()) and self.sessions[bytes([msg[0]])].is_alive():
+                self.sessions[bytes([msg[0]])].give(msg)
             else:
                 if is_rts_frame(msg):
-                    session = J1587ReceiveSession(msg,self.send_queue)
-                    sessions[msg[0]] = session
+                    session = J1587ReceiveSession(msg,self.send_queue,self.mailbox)
+                    self.sessions[bytes([msg[0]])] = session
                     session.start()
                 else:
                     abort = ABORT_FRAME(self.my_mid,msg[0])
                     self.send_queue.put(abort.to_buffer())
 
-    def read_message(self,blocking=True,timeout=None):
-        return self.mailbox.get(blocking=blocking,timeout=timeout)
+    def read_message(self,block=True,timeout=None):
+        return self.mailbox.get(block=block,timeout=timeout)
 
     def send_message(self,msg):
         self.send_queue.put(msg)
 
     def transport_send(self,dst,msg):
         success = threading.Event()
-        send_session = J1587SendSession(self.my_mid,dst,msg,self.send_queue,sucess)
+        send_session = J1587SendSession(self.my_mid,dst,msg,self.send_queue,success)
+        self.sessions[bytes([dst])] = send_session
         send_session.start()
         send_session.join()
         if not success.is_set():
@@ -319,7 +328,7 @@ class J1587WorkerThread(threading.Thread):
 
     def join(self,timeout=None):
         self.stopped.set()
-        super(J1708WorkerThread,self).__init__()
+        super(J1587WorkerThread,self).join(timeout=timeout)
         
 
 class J1587Driver():
@@ -340,3 +349,10 @@ class J1587Driver():
     def __del__(self):
         self.J1587Thread.join(timeout=1)
         
+if __name__ == '__main__':
+    driver = J1587Driver(0xb6)
+    msg = b'\x00\xc8\x07\x04\x06\x00\x46\x41\x41\x5a\x05\x48'
+    driver.transport_send(0x80,msg)
+    for i in range(100):
+        print(repr(driver.read_message()))
+
