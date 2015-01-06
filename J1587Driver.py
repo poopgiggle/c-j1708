@@ -217,8 +217,10 @@ class J1587SendSession(threading.Thread):
         eom_recvd = False
         start_time = time.time()
         while (not eom_recvd) and time.time() - start_time < 60:
-            msg = self.in_queue.get(block=True,timeout=2)
-            if msg is None:
+            try:
+                msg = self.in_queue.get(block=True,timeout=2)
+            except queue.Empty:
+                time.sleep(3)
                 continue
             if not is_conn_frame(msg):
                 raise Exception("J1587SendSession should not receive %s" % repr(msg))
