@@ -3,9 +3,13 @@ import threading
 import J1708Driver
 import struct
 import time
+import socket
 
 dpa_mid = None
 ecm_mid = None
+
+logging_socket = socket.socket(family=socket.AF_INET,type=socket.SOCK_DGRAM)
+logging_socket.bind(('localhost',13373))
 
 class PassThread(threading.Thread):
     def __init__(self,inport,outport,name,filelock):#name is either "ECM" or "DPA"
@@ -21,8 +25,6 @@ class PassThread(threading.Thread):
     
 
     def run(self):
-        fh = open("/var/diagnostics/toBeProcessed/forwarding.log","a")
-        fh.write("Begin J1708 Forwarding\n")
         while True:
             msg = self.inport.read_message(checksum=True)
             #subclass PassThread to get a different apply_filter function.
@@ -30,8 +32,12 @@ class PassThread(threading.Thread):
 
             if msg is not None and len(msg) > 0:
                 with self.filelock:
-                    fh.write("%f %s\t%s\n" % (time.time(),self.name,repr(list(map(hex,list(msg))))))
                     self.outport.send_message(msg,has_check=True)
+                    proto = "J1708"
+                    sr = "RM" if self.name == "ECM" else "SM"
+                    data = ",".join(list(map(lambda x: "%x" % x,msg)))
+                    to_send = bytes(','.join([proto,sr,data]),"ascii")
+                    logging_socket.sendto(to_send,('localhost',13371))
 
     
 

@@ -29,6 +29,7 @@
 #define TENTH_BIT_TIME 10417
 #define TWELVEBITTIMES BIT_TIME * 12
 
+#define BIT_TIME_MICROS 104
 
 struct timespec diff(struct timespec start, struct timespec end);
 //int open_gpio(char* gp_path);
@@ -96,9 +97,10 @@ void * WriteThread(void* args){
   sleepspec.tv_sec = 0;
   sleepspec.tv_nsec = BIT_TIME*10;
 
-  struct timespec clearspec;
-  clearspec.tv_sec = 0;
-  clearspec.tv_nsec = 0;
+  //struct timespec clearspec;
+  //  clearspec.tv_sec = 0;
+  //clearspec.tv_nsec = 0;
+  unsigned long clear = 0;
 
   //  gpio = open_gpio("/sys/class/gpio/gpio60/value");
 
@@ -106,14 +108,15 @@ void * WriteThread(void* args){
     len = recvfrom(read_socket,msg_buf,256,0,(struct sockaddr *) &other_addr, &client_size);
     //    printf("%s\n","Sending to ecm serial");
     //    ppj1708(len,msg_buf);
-    clearspec.tv_nsec = TENTH_BIT_TIME*14*len;
+    clear = BIT_TIME_MICROS * 2 * len;
     wait_for_quiet(gpio,6,&buslock);
 
 
 
     //fprintf(stderr,"sending a message!\n");
     write(fd,msg_buf,len);
-    nanosleep(&clearspec,NULL);
+    //    nanosleep(&clearspec,NULL);
+    usleep(clear);
     len2 = read(fd,&msg_buf,len);
     //        printf("%s","ECM cleared from message buffer: ");
     //        ppj1708(len2,msg_buf);

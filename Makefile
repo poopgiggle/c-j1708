@@ -20,6 +20,7 @@ install:
 	cp J1708PassthroughDriver $(DESTDIR)$(INSTALL_PREFIX)/bin/
 	if [ ! -e $(DESTDIR)/usr/local/lib/python3.5/site-packages/ ]; then mkdir -p $(DESTDIR)/usr/local/lib/python3.5/site-packages/; fi
 	cp J1708Driver.py $(DESTDIR)/usr/local/lib/python3.5/site-packages/
+	cp J1587Driver.py $(DESTDIR)/usr/local/lib/python3.5/site-packages/
 	if [ ! -e $(DESTDIR)/etc/init ]; then mkdir -p $(DESTDIR)/etc/init; fi
 	cp upstart/*.conf $(DESTDIR)/etc/init/
 	if [ ! -e $(DESTDIR)/var/diagnostics/toBeProcessed ]; then mkdir -p $(DESTDIR)/var/diagnostics/toBeProcessed; fi
