@@ -1,7 +1,8 @@
-221c7a2649a5d2c31ea8406fa27fd8da  opt/synercon/bin/J1708PassthroughDriver
-7be462e94d3af136617a584119946f79  opt/synercon/bin/dpa
-77bd991eb867baf34219ac8075d435a0  opt/synercon/bin/ecm
-c8031feb9129e4bd0f0c7f0266e1cad3  usr/local/lib/python3.5/site-packages/J1708Driver.py
-7f35c0c7f4237e3af2da6e66e2d43b49  usr/share/doc/j1708-drivers/README.Debian
-6a54f6ea627c76fd2bdd2eca4e0c70d8  usr/share/doc/j1708-drivers/changelog.Debian.gz
-be35a3a53d6fcc6a1938034946510870  usr/share/doc/j1708-drivers/copyright
+0ed6f5fb70b93bcabc1d382a29fa8e72  opt/synercon/bin/J1708PassthroughDriver
+70ecaa3177dbf172332a7052e7b720b8  opt/synercon/bin/dpa
+45d1d28505699a29ae8ea48cd6931e81  opt/synercon/bin/ecm
+c29a61aa322fd099b7ecad09b9c9de56  usr/local/lib/python3.5/site-packages/J1587Driver.py
+1c7a8cbd4fcd420725b38c907d016512  usr/local/lib/python3.5/site-packages/J1708Driver.py
+aa5b165d61ff1b95482d6e4505b1ba73  usr/share/doc/j1708-drivers/README.Debian
+f3dc52a24eb6198e88cfbdd4ffaea48f  usr/share/doc/j1708-drivers/changelog.Debian.gz
+68d6806e35f72708e6e29631389cea95  usr/share/doc/j1708-drivers/copyright

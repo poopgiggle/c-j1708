@@ -20,12 +20,12 @@ manpage.1: manpage.sgml
   <!ENTITY dhfirstname "<firstname>FIRSTNAME</firstname>">
   <!ENTITY dhsurname   "<surname>SURNAME</surname>">
   <!-- Please adjust the date whenever revising the manpage. -->
-  <!ENTITY dhdate      "<date>November 15, 2014</date>">
+  <!ENTITY dhdate      "<date>January 29, 2015</date>">
   <!-- SECTION should be 1-8, maybe w/ subsection other parameters are
        allowed: see man(7), man(1). -->
   <!ENTITY dhsection   "<manvolnum>SECTION</manvolnum>">
-  <!ENTITY dhemail     "<email>ubuntu@unknown</email>">
-  <!ENTITY dhusername  "Demo User">
+  <!ENTITY dhemail     "<email>james@synercontechnologies.com</email>">
+  <!ENTITY dhusername  "James Johnson">
   <!ENTITY dhucpackage "<refentrytitle>J1708-DRIVERS</refentrytitle>">
   <!ENTITY dhpackage   "j1708-drivers">
 

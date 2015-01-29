@@ -31,13 +31,8 @@ class PassThread(threading.Thread):
 
 
             if msg is not None and len(msg) > 0:
-                with self.filelock:
-                    self.outport.send_message(msg,has_check=True)
-                    proto = "J1708"
-                    sr = "RM" if self.name == "ECM" else "SM"
-                    data = ",".join(list(map(lambda x: "%x" % x,msg)))
-                    to_send = bytes(','.join([proto,sr,data]),"ascii")
-                    logging_socket.sendto(to_send,('localhost',13371))
+                self.outport.send_message(msg,has_check=True)
+                
 
     
 

@@ -1,2 +1,2 @@
-shlibs:Depends=libc6 (>= 2.4), libxenomai1
+shlibs:Depends=libc6 (>= 2.15), libxenomai1
 misc:Depends=

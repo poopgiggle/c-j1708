@@ -1,5 +1,5 @@
-j1708-drivers (0.1-1) unstable; urgency=low
+j1708-drivers (0.8-1) unstable; urgency=low
 
   * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
 
- -- Demo User <ubuntu@unknown>  Sat, 15 Nov 2014 23:20:29 +0000
+ -- James Johnson <james@synercontechnologies.com>  Thu, 29 Jan 2015 15:00:50 -0600

@@ -11,7 +11,7 @@
 #                    <...>
 ### END INIT INFO
 
-# Author: Demo User <ubuntu@unknown>
+# Author: James Johnson <james@synercontechnologies.com>
 
 # Do NOT "set -e"
 

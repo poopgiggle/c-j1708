@@ -104,8 +104,8 @@ void * WriteThread(void* args){
 
   while(1){
     len = recvfrom(read_socket,msg_buf,256,0,(struct sockaddr *) &other_addr, &client_size);
-        printf("%s\n","Sending to ecm serial");
-        ppj1708(len,msg_buf);
+    //    printf("%s\n","Sending to ecm serial");
+    //    ppj1708(len,msg_buf);
     clearspec.tv_nsec = TENTH_BIT_TIME*14*len;
     wait_for_quiet(gpio,6,&buslock);
 
@@ -115,8 +115,8 @@ void * WriteThread(void* args){
     write(fd,msg_buf,len);
     nanosleep(&clearspec,NULL);
     len2 = read(fd,&msg_buf,len);
-            printf("%s","ECM cleared from message buffer: ");
-            ppj1708(len2,msg_buf);
+    //        printf("%s","ECM cleared from message buffer: ");
+    //        ppj1708(len2,msg_buf);
     pthread_mutex_unlock(&buslock);
     nanosleep(&sleepspec,NULL);
   }
