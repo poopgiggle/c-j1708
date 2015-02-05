@@ -26,6 +26,7 @@
 
 #define NANO 1000000000L
 #define BIT_TIME 104170
+#define BIT_TIME_MICROS 104
 #define TENTH_BIT_TIME 10417
 #define TWELVEBITTIMES BIT_TIME * 12
 
@@ -61,7 +62,7 @@ void * ReadThread(void* args){
   int i;
   //  gpio = open_gpio("/sys/class/gpio/gpio60/value");
 
-  synchronize();
+
   tcflush(fd,TCIFLUSH);
   while(1){
     len = read_j1708_message(fd,msg_buf, &buslock);
@@ -70,8 +71,8 @@ void * ReadThread(void* args){
       placeholder = 0;
       for(i=0; i<len ; i++){
 	if(i-placeholder > 0 && msg_buf[i] == 0x80 && !j1708_checksum(i-placeholder,&msg_buf[placeholder])){
-	  printf("%s","ECM SENDING STUCK MESSAGE: ");
-	  ppj1708(i-placeholder,&msg_buf[placeholder]);
+	  //	  printf("%s","ECM SENDING STUCK MESSAGE: ");
+	  //	  ppj1708(i-placeholder,&msg_buf[placeholder]);
 	  sendto(read_socket,&msg_buf[placeholder],i-placeholder,MSG_DONTWAIT,(struct sockaddr*) &other_addr, sizeof(other_addr));
 	  placeholder = i;
 	}
@@ -90,33 +91,41 @@ void * WriteThread(void* args){
   int len;
   int len2;
   char msg_buf[256];
+  char read_buf[256];
   int client_size = sizeof(other_addr);
-
+  int sent;
   struct timespec sleepspec;
   sleepspec.tv_sec = 0;
   sleepspec.tv_nsec = BIT_TIME*10;
 
-  struct timespec clearspec;
-  clearspec.tv_sec = 0;
-  clearspec.tv_nsec = 0;
-
+  useconds_t sleeptime;
   //  gpio = open_gpio("/sys/class/gpio/gpio60/value");
 
   while(1){
+
     len = recvfrom(read_socket,msg_buf,256,0,(struct sockaddr *) &other_addr, &client_size);
+    sleeptime = BIT_TIME_MICROS*12*len;
+    sent = 0;
     //    printf("%s\n","Sending to ecm serial");
     //    ppj1708(len,msg_buf);
-    clearspec.tv_nsec = TENTH_BIT_TIME*14*len;
+    while(!sent){
+
     wait_for_quiet(gpio,6,&buslock);
-
-
 
     //fprintf(stderr,"sending a message!\n");
     write(fd,msg_buf,len);
-    nanosleep(&clearspec,NULL);
-    len2 = read(fd,&msg_buf,len);
-    //        printf("%s","ECM cleared from message buffer: ");
-    //        ppj1708(len2,msg_buf);
+    usleep(sleeptime);
+    len2 = read(fd,&read_buf,len);
+    printf("%s","ECM cleared from message buffer: ");
+    ppj1708(len2,read_buf);
+    if(!memcmp(msg_buf,read_buf,len)){
+      sent = 1;
+    }else{
+      pthread_mutex_unlock(&buslock);
+    }
+    
+
+    }
     pthread_mutex_unlock(&buslock);
     nanosleep(&sleepspec,NULL);
   }
@@ -235,9 +244,9 @@ int synchronize(){
   struct timespec temp_time;
   int synced = 0;
 
-  clock_gettime(CLOCK_REALTIME, &start);
+  clock_gettime(CLOCK_MONOTONIC, &start);
   while(!synced){
-    clock_gettime(CLOCK_REALTIME, &temp_time);
+    clock_gettime(CLOCK_MONOTONIC, &temp_time);
     if(read_gpio()){
       //      printf("%d\n",difftimenanos(diff(start,temp_time)));
       if(difftimenanos(diff(start,temp_time)) >= TWELVEBITTIMES)
@@ -287,9 +296,9 @@ void wait_for_quiet(int gpio_fd,int priority,pthread_mutex_t *lock){
   int quiet = 0;
 
   pthread_mutex_lock(lock);
-  clock_gettime(CLOCK_REALTIME,&start);
+  clock_gettime(CLOCK_MONOTONIC,&start);
   while(!quiet){
-    clock_gettime(CLOCK_REALTIME, &temp_time);
+    clock_gettime(CLOCK_MONOTONIC, &temp_time);
     if(read_gpio()){
       if(difftimenanos(diff(start,temp_time)) >= duration)
 	quiet = 1;
